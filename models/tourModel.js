@@ -50,6 +50,7 @@ const tourSchema = mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now(),
+    select: false, //don't allow this field to be returned to user
   },
   startDates: [String], //array of dates at which a Tour starts
 });
