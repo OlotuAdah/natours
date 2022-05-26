@@ -1,5 +1,5 @@
 //
-const { query } = require("express");
+
 const TourModel = require("../models/tourModel");
 
 ///
@@ -8,20 +8,17 @@ exports.getTours = async (req, res) => {
     // console.log(req.query);
     // BUILD QUERY
     //1A) Filtering
-    const queryObject = { ...req.query };
+    let queryObj = { ...req.query };
     const excludedFields = ["page", "sort", "limit", "fields"];
-    excludedFields.forEach((el) => delete queryObject[el]);
+    excludedFields.forEach((el) => delete queryObj[el]);
 
     //1B) Advanced Filtering
-    //convert queryObject to string to use regular expression on it
-    let queryString = JSON.stringify(queryObject);
-    queryString = queryString.replace(
-      /\b(gte|gt|lte|lt)\b/g,
-      (match) => `$${match}`
-    ); //for each match attach $ to the beginning to satisfy mongo requirement
-
-    queryString = JSON.parse(queryString); //convert queryString back to object
-    let query = TourModel.find(queryString);
+    //convert queryObj to string to use regular expression on it
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
+    //for each match attach $ to the beginning to satisfy mongo requirement
+    queryObj = JSON.parse(queryStr); //convert queryStr back to object
+    let query = TourModel.find(queryObj);
 
     //2)SORTING
     if (req.query.sort) {
@@ -149,3 +146,10 @@ exports.aliasCheapestTours = async (req, res, next) => {
   req.query.fields = "name,price,ratingsAverage,summary,difficulty";
   next();
 };
+
+//Just for reference
+// const tours = await TourModel.find()
+//   .where("duration")
+//   .lte(duration) //less than or equal
+//   .where("difficulty")
+//   .equals(difficulty);
