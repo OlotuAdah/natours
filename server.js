@@ -5,7 +5,8 @@ const mongoose = require("mongoose");
 const PORT = process.env.PORT;
 
 mongoose
-  .connect(process.env.mongoURI)
+  // .connect(process.env.mongoURI)
+  .connect(process.env.mongoCloudURI)
   .then(() => console.log("Connected to db!"))
   .catch((err) => {
     console.log(err);
