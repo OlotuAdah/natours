@@ -1,6 +1,10 @@
 const express = require("express");
 //
 const {
+  protect,
+  restictTo,
+} = require("../controllers/authenticationController");
+const {
   getTours,
   getTour,
   createTour,
@@ -27,6 +31,10 @@ tourRouter.route("/monthly-plan/:year").get(getMonthlyPlan);
 /////////////////////
 
 tourRouter.route("/").get(getTours).post(createTour).delete(deleteTours);
-tourRouter.route("/:tourId").get(getTour).patch(updateTour).delete(deleteTour);
+tourRouter
+  .route("/:tourId")
+  .get(protect, getTour)
+  .patch(protect, restictTo("admin"), updateTour)
+  .delete(deleteTour);
 
 module.exports = tourRouter;

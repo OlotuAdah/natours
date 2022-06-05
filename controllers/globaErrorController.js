@@ -38,6 +38,10 @@ const handleDBValidationErros = (error) => {
   const message = `Validation Error: ${validationMessages}  `;
   return new AppError(message, 400);
 };
+const handleJWTError = (error) =>
+  new AppError("Invalid token. Please log in again!", 401);
+const handleJWTExpiredTokenError = (error) =>
+  new AppError("Expired token: Please log in again!", 401);
 
 ////////////////////////
 
@@ -54,6 +58,10 @@ const globalErrorConroller = (err, req, res, next) => {
     if (error.code === 11000) error = handleDBDuplicateFieldsError(error); //11000 is the errorcode for duplicate key
     if (error.name === "ValidationError")
       error = handleDBValidationErros(error);
+    if (error.name === "JsonWebTokenError") error = handleJWTError(error);
+    if (error.name === "TokenExpiredError")
+      error = handleJWTExpiredTokenError(error);
+
     sendErrProd(error, res);
   }
 };

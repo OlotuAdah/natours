@@ -110,7 +110,8 @@ tourSchema.pre("save", function (next) {
 
 tourSchema.post("save", function (doc, next) {
   //doc is document just saved
-  //console.log(doc); //logs the updated doc including slug field this time
+  //console.log(doc);
+  //logs the updated doc including slug field this time
   next(); //Just like express, calls the next middleware in the stack
 });
 
