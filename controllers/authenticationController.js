@@ -5,6 +5,7 @@ const UserModel = require("../models/userModel");
 const catchAsyncError = require("../utils/catchAsyncError");
 const AppError = require("../utils/AppError");
 const sendEmail = require("../utils/email");
+const { cookieOptions } = require("../utils/cookie");
 
 ////signup
 exports.signup = catchAsyncError(async (req, res, next) => {
@@ -18,9 +19,10 @@ exports.signup = catchAsyncError(async (req, res, next) => {
     confirmPassword,
     passwordChangedAt,
   }); //NB: Only store the selected fields for new user, to avoid user creating new doc with admin or other role privileges
-  const token = signToken(newUser._id);
   newUser.password = undefined; //don't send password to user
-  res.status(201).json({ status: "Success", token, user: newUser });
+  // const token = signToken(newUser._id);
+  // res.status(201).json({ status: "Success", token, user: newUser });
+  createAndSendToken(newUser, res, 201, "Registration Successful!");
 });
 
 ///login
@@ -36,13 +38,10 @@ exports.login = catchAsyncError(async (req, res, next) => {
     //provide vague response in other not to aid user with valuable info with your res e.g password is not correct!
   }
   //3: If everything is fine, send token to client
-  const token = signToken(user._id);
-  return res
-    .status(200)
-    .json({ status: "Success", msg: "Login Successful!", token });
+  createAndSendToken(user, res, 200, "Login Successful!");
 });
 
-exports.protect = catchAsyncError(async (req, res, next) => {
+exports.authenticate = catchAsyncError(async (req, res, next) => {
   //1:Checking token
   let token = null;
   const { authorization } = req.headers;
@@ -83,7 +82,7 @@ exports.protect = catchAsyncError(async (req, res, next) => {
   next();
 });
 
-exports.restictTo = (...roles) => {
+exports.authorize = (...roles) => {
   // console.log(roles);
   return (req, res, next) => {
     //roles an array eg ['admin'], ['admin','lead']
@@ -150,15 +149,18 @@ exports.resetPassword = catchAsyncError(async (req, res, next) => {
   await user.save(); //persist the new change to the doc
 
   //3: log the user in & sen jwt
-  const token = signToken(user._id);
-  res.status(200).json({ status: "Success", token });
+  createAndSendToken(
+    user,
+    res,
+    200,
+    "Password has been reset. Please, Login with new password!"
+  );
 });
 
 exports.updatePassword = catchAsyncError(async (req, res, next) => {
   //// This functionality is for logged in user, but we need the user to post her current password to be sure she is who she claims to be
   //1: get user from the collection
   const { currentPassword, newPassword, confirmPassword } = req.body;
-
   const user = await UserModel.findById(req.user.id).select("+password");
   //2: check if the posted password is correct
   if (!user || !(await user.correctPassword(currentPassword, user.password))) {
@@ -169,16 +171,21 @@ exports.updatePassword = catchAsyncError(async (req, res, next) => {
   user.confirmPassword = confirmPassword;
   await user.save(); // validation should apply
   //4 login user in, send token
-  const token = signToken(user._id);
-  res.status(200).json({ status: "Success", token, user });
+  createAndSendToken(user, res, 200, "");
 });
 
 ////////////////////////
 ///local helper fuctions
-// function createAndSendToken(user, statusCode, res) {
-//   const token = signToken(user._id);
-//   res.status(statusCode).json({ status: "Success", token, data: { user } });
-// }
+function createAndSendToken(user, res, statusCode, msg) {
+  const token = signToken(user._id);
+  if (process.env.NODE_ENV !== "production") cookieOptions.secure = false; //only use secure as true in production
+  res.cookie("jwt", token, cookieOptions); //cookie expires in 90 days
+  // console.log(cookieOptions);
+  user.password = undefined; //remove password from  response
+  res
+    .status(statusCode)
+    .json({ status: "Success", msg, token, data: { user } });
+}
 
 function signToken(id) {
   const token = jwt.sign({ id }, process.env.jwtSecret, {

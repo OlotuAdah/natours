@@ -42,6 +42,11 @@ const userSchema = mongoose.Schema({
     },
     message: "Confirm password must macth password!",
   },
+  active: {
+    type: Boolean,
+    default: true,
+    select: false, // never show this as part of response obj
+  },
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
@@ -59,6 +64,13 @@ userSchema.pre("save", function (next) {
   const doc = this;
   if (!doc.isModified("password") || doc.isNew) return next(); //do this only when password is modified or doc is new, else goto next middleware
   this.passwordChangedAt = Date.now() - 1000; //subtract 1000millsec or 1 sec to ensure that token is created before password change, in the even that writing to the db lags a little bit
+  next();
+});
+
+userSchema.pre(/^find/g, function (next) {
+  //
+  const doc = this;
+  doc.find({ active: true });
   next();
 });
 
