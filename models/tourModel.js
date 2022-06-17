@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 const validator = require("validator");
+// const UserModel = require("../models/userModel");
+
+////////////////////
 const tourSchema = mongoose.Schema(
   {
     name: {
@@ -82,17 +85,59 @@ const tourSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    startLocation: {
+      //the meeting point; where the tour starts. Then there is array of other locations for this tour
+      //embedded obj, not just a schema type like secretTour. which means it can have other properties
+      //this obj must have at least two fields name: type and coordinates
+      //GeoJSON data type for geo spatial data
+      type: {
+        type: String,
+        default: "Point", //composed of latitude and longitude
+        enum: ["Point"],
+      },
+      coordinates: [Number], //lat and lon
+      address: String,
+      description: String,
+    },
+    locations: [
+      {
+        type: {
+          type: String,
+          default: "Point",
+          enum: ["Point"],
+        },
+        coordinates: [Number],
+        address: String,
+        description: String,
+        day: Number,
+      },
+    ],
+    // guides:Array, //simply use this for embedding instead of referencing as below
+    guides: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
+
   {
     toJSON: { virtuals: true }, //when doc is outputed as JSON, show vitual fileds
     toObject: { virtuals: true }, //when doc is outputed as Object, show vitual fileds
   }
 );
 
-//
+///////////indexes//////makes raeding with this parameters faster
+tourSchema.index({ price: 1, ratingsAverage: -1 });
+tourSchema.index({ slug: 1 });
+
+///////////////
 tourSchema.virtual("durationInWeeks").get(function () {
   return this.duration / 7; //converts duration in days to duration in weeks
 });
+
+//creating a virtual field to aid populating parent referencing, since the parent is not directly aware of its children
+tourSchema.virtual("reviews", {
+  ref: "Review",
+  foreignField: "tour",
+  localField: "_id",
+});
+
 //NB: you can't use a vitual field in aquery directly
 //virtual properties makes sense for fields that can be derived  from one another
 //since they aren't saved to the db
@@ -106,6 +151,21 @@ tourSchema.pre("save", function (next) {
   const doc = this; //this should points to the current document
   doc.slug = slugify(doc.name, { lower: true });
   next(); //Just like express, calls the next middleware in the stack
+});
+
+////Referencing document(s) in another
+
+////
+
+//Embedding document(s) into another/; /////////
+tourSchema.pre("save", async function (next) {
+  const currDoc = this;
+  const guidesPromises = currDoc.guides.map(
+    async (id) => await UserModel.findById(id)
+  );
+  //embed guides into this tour doc
+  currDoc.guides = await Promise.all(guidesPromises); //returns the real data of the users into guides
+  next();
 });
 
 tourSchema.post("save", function (doc, next) {
@@ -131,11 +191,17 @@ tourSchema.post(/^find/, function (docs, next) {
   next();
 });
 
+tourSchema.pre(/^find/, function (next) {
+  const currQuery = this;
+  const populateOptions = { path: "guides", select: "-__v -passwordChangedAt" };
+  currQuery.populate(populateOptions);
+  next();
+});
+
 //AGGREGATION  MIDDLEWARE ////////////////
 tourSchema.pre("aggregate", function (next) {
-  //this points to aggregationn object here
+  //this, points to aggregationn object here
   const aggregationObject = this;
-  // console.log(aggregationObject.pipeline());
   aggregationObject
     .pipeline()
     .unshift({ $match: { secretTour: { $ne: true } } }); //unshift pushes elements to the beginning

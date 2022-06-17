@@ -1,11 +1,14 @@
 require("dotenv").config();
 const fs = require("fs");
 const TourModel = require("./models/tourModel");
+const UserModel = require("./models/userModel");
+const ReviewModel = require("./models/reviewModel");
 const mongoose = require("mongoose");
 //
 
 mongoose
-  .connect(process.env.mongoCloudURI)
+  // .connect(process.env.mongoCloudURI)
+  .connect(process.env.mongoURI)
   .then(() => {
     console.log("Connected to DB");
   })
@@ -13,9 +16,19 @@ mongoose
     console.log(err);
   });
 
-console.log(process.env.PORT);
+// console.log(process.env.PORT);
 const Tours = JSON.parse(
-  fs.readFileSync("./dev-data/data/tours-simple.json", {
+  fs.readFileSync("./dev-data/data/tours.json", {
+    encoding: "utf-8",
+  })
+);
+const Users = JSON.parse(
+  fs.readFileSync("./dev-data/data/users.json", {
+    encoding: "utf-8",
+  })
+);
+const Reviews = JSON.parse(
+  fs.readFileSync("./dev-data/data/reviews.json", {
     encoding: "utf-8",
   })
 );
@@ -23,6 +36,8 @@ const Tours = JSON.parse(
 const importData = async () => {
   try {
     await TourModel.create(Tours); //can take arrays of tours an create them
+    await UserModel.create(Users, { validateBeforeSave: false }); //can take arrays of tours an create them
+    await ReviewModel.create(Reviews); //can take arrays of tours an create them
     console.log("Data loaded successfully!");
   } catch (error) {
     console.log(error);
@@ -33,6 +48,8 @@ const importData = async () => {
 const deleteData = async () => {
   try {
     await TourModel.deleteMany(); //can take arrays of tours an create them
+    await UserModel.deleteMany(); //can take arrays of tours an create them
+    await ReviewModel.deleteMany(); //can take arrays of tours an create them
     console.log("Data deleted successfully!");
   } catch (error) {
     console.log(error);

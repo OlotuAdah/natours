@@ -3,12 +3,13 @@ const AppError = require("../utils/AppError");
 const catchAsyncError = require("../utils/catchAsyncError");
 const TourModel = require("../models/tourModel");
 const APIFeatures = require("../utils/APIFeatures");
+// const { deleteOneDoc } = require("../controllers/handlerFactory");
 
 exports.getTours = catchAsyncError(async (req, res, next) => {
   let apiFeatures = new APIFeatures(TourModel.find(), req.query);
   apiFeatures = apiFeatures.fliter().sortQry().limitFields().paginate();
   //ExECUTE QUERY NOW
-  const tours = await apiFeatures.query; //await ensures that all these query now resolves with real data
+  const tours = await apiFeatures.query; //await ensures that all these query resolves with real data
   res
     .status(200)
     .json({ status: "Success", results: tours.length, data: tours });
@@ -16,7 +17,7 @@ exports.getTours = catchAsyncError(async (req, res, next) => {
 
 exports.getTour = catchAsyncError(async (req, res, next) => {
   const { tourId } = req.params;
-  const tour = await TourModel.findById(tourId);
+  const tour = await TourModel.findById(tourId).populate("reviews");
   if (!tour)
     return next(new AppError(`Tour with id: ${tourId} not found!`, 404));
   res.status(200).json({ status: "Success", data: tour });
@@ -38,6 +39,8 @@ exports.updateTour = catchAsyncError(async (req, res, next) => {
     return next(new AppError(`Tour with id: ${tourId} not found!`, 404));
   res.status(200).json({ status: "Success", data: updatedTour });
 });
+
+// exports.deleteTour = deleteOneDoc(TourModel); //delete using the factory method
 
 exports.deleteTour = catchAsyncError(async (req, res, next) => {
   const { tourId } = req.params;

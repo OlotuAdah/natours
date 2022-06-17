@@ -3,13 +3,20 @@ const UserModel = require("../models/userModel");
 const AppError = require("../utils/AppError");
 
 exports.getUsers = catchAsyncError(async (req, res, next) => {
-  const users = await UserModel.find();
+  const filter = req.query;
+  const users = await UserModel.find(filter);
   res.status(200).json({ status: "Sucess", users });
 });
 
-exports.getUser = (req, res, next) => {
-  return res.status(200).json("Sending user with id: " + req.params.userId);
-};
+//allows users to get their data
+exports.getMe = catchAsyncError(async (req, res, next) => {
+  //get data of logged in user
+  const user = await UserModel.findById(req.user.id);
+  if (!user) {
+    return next(new AppError("No record found!", 401));
+  }
+  res.status(200).json({ status: "Sucess", user });
+});
 
 exports.updateMe = catchAsyncError(async (req, res, next) => {
   //1: create error if user posts password data
@@ -23,9 +30,9 @@ exports.updateMe = catchAsyncError(async (req, res, next) => {
     );
   }
   //2: filter out unwated fields sent by user and not allowed to be updated
-  const fields = ["name"]; //add more fields in future; these are the only fields that user can update
+  const fieldsAllowedToBeUpdated = ["name", "email"]; //add more fields in future; these are the only fields that user can update
   for (let el in userData) {
-    if (!fields.includes(el)) delete userData[el];
+    if (!fieldsAllowedToBeUpdated.includes(el)) delete userData[el];
   }
   //3: Update user data
   const updatedUser = await UserModel.findByIdAndUpdate(req.user.id, userData, {

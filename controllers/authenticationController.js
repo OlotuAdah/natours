@@ -50,7 +50,7 @@ exports.authenticate = catchAsyncError(async (req, res, next) => {
   }
   if (!token) {
     return next(
-      new AppError("You're not logged in! Please login to get acess"),
+      new AppError("You're not logged in! Please login to get access!"),
       401
     );
   }

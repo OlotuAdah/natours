@@ -2,7 +2,6 @@ const express = require("express");
 //
 const {
   authenticate,
-  restictTo,
   authorize,
 } = require("../controllers/authenticationController");
 const {
@@ -20,24 +19,34 @@ const {
 const tourRouter = express.Router();
 // tourRouter.param("id", checkID);
 
+const reviewRouter = require("../routes/reviewRoute");
+//Nested route signature (here, tour resourec is parent of review resource)
+//  ... /tour/233444id/reviews
+//if tourRouter (parent) ever receive any request for its child resource, use the the child's router
+tourRouter.use("/:tourId/reviews", reviewRouter);
+
 //ALIAS ROUTES//////////
 tourRouter.route("/top-tours").get(aliasTopTours, getTours);
 tourRouter.route("/cheapest-tours").get(aliasCheapestTours, getTours);
 ///////////////////////////
 
 //STATS ROUTES//////////
+tourRouter.route("/tour-stats").get(getTourStats);
 tourRouter
-  .route("/tour-stats")
-  .get(authenticate, authorize("admin"), getTourStats);
-tourRouter.route("/monthly-plan/:year").get(getMonthlyPlan);
+  .route("/monthly-plan/:year")
+  .get(authenticate, authorize("admin", "guide", "lead-guide"), getMonthlyPlan);
 
 /////////////////////
 
-tourRouter.route("/").get(getTours).post(createTour).delete(deleteTours);
+tourRouter
+  .route("/")
+  .get(getTours)
+  .post(authenticate, authorize("admin", "lead-guide"), createTour)
+  .delete(authenticate, authorize("admin", "lead-guide"), deleteTours);
 tourRouter
   .route("/:tourId")
-  .get(authenticate, getTour)
-  .patch(authenticate, authorize("admin"), updateTour)
+  .get(getTour)
+  .patch(authenticate, authorize("admin", "lead-guide"), updateTour)
   .delete(authenticate, deleteTour);
 
 module.exports = tourRouter;

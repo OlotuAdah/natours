@@ -3,7 +3,7 @@ const express = require("express");
 
 const {
   getUsers,
-  getUser,
+  getMe,
   updateMe,
   deleteMyAccount,
 } = require("../controllers/userController");
@@ -14,22 +14,25 @@ const {
   resetPassword,
   updatePassword,
   authenticate,
+  authorize,
 } = require("../controllers/authenticationController");
 const userRouter = express.Router();
 
 ////////Auth route, for users' auth requests
 userRouter.post("/signup", signup);
 userRouter.post("/login", login);
-
 userRouter.patch("/forgotPassword", forgotPassword);
 userRouter.patch("/resetPassword/:token", resetPassword);
-userRouter.patch("/updatePassword/", authenticate, updatePassword);
-userRouter.patch("/updateMe/", authenticate, updateMe);
-userRouter.delete("/deleteMyAccount/", authenticate, deleteMyAccount);
 
-///////User route, for admin requests on user data
-userRouter.route("/").get(getUsers);
-userRouter.route("/:userId").get(getUser);
+//for only logged in users
+userRouter.use(authenticate); //from this line, all the routes need users to be authenticated to get acess
+userRouter.patch("/updatePassword/", updatePassword);
+userRouter.patch("/updateMe/", updateMe);
+userRouter.delete("/deleteMyAccount/", deleteMyAccount);
+
 /////////////
-
+//get user(s)
+userRouter.get("/me", getMe);
+userRouter.get("/", authorize("admin"), getUsers);
+/////////
 module.exports = userRouter;
