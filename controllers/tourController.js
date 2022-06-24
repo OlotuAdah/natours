@@ -55,12 +55,14 @@ exports.deleteTours = catchAsyncError(async (req, res) => {
 });
 
 exports.aliasTopTours = catchAsyncError(async (req, res, next) => {
+  //just manipulate the query obj before running the main getTours
   req.query.limit = 5;
   req.query.sort = "-ratingsAverage,-price";
   req.query.fields = "name,price,ratingsAverage,summary,difficulty";
   next();
 });
 exports.aliasCheapestTours = catchAsyncError(async (req, res, next) => {
+  //just manipulate the query obj before running the main getTours
   req.query.limit = 5;
   req.query.sort = "price";
   req.query.fields = "name,price,ratingsAverage,summary,difficulty";
@@ -131,4 +133,79 @@ exports.getMonthlyPlan = catchAsyncError(async (req, res, next) => {
     },
   ]);
   res.status(200).json({ status: "Success", data: plan });
+});
+
+exports.getClosedByTours = catchAsyncError(async (req, res, next) => {
+  //get tours within specified distance
+  // "/closed-by-tours/:distance/latlon/:latlon/unit/:unit",
+  //E.g closed-by-tours/182/latlon/34.111745,-118.113491/unit/mi where mi==>miles, km==>killometer
+  const { distance, latlon, unit } = req.params;
+  const [lat, lon] = latlon.split(",");
+  //The equatorial radius of the Earth is approximately 3,963.2 miles or 6,378.1 kilometers[MongoDb Documentation]
+  //radius in miles is distance/3963.2
+  //radius in killometer is distance/6378.1
+  const radius = unit === "mi" ? distance / 3963.2 : distance / 6378.1;
+  if (!lat || !lon) {
+    return next(
+      new AppError(
+        "Please provide latitude and longitude in format lat,lon.",
+        400
+      )
+    );
+  }
+  //creating filter object for the query
+  const qryFilter = {
+    startLocation: { $geoWithin: { $centerSphere: [[lon, lat], radius] } }, //$centerSphere takes an array of 1: lat,lon and 2: radius
+  };
+  const tours = await TourModel.find(qryFilter);
+  res.status(200).json({
+    status: "Success",
+    results: tours.length,
+    radius,
+    data: { data: tours },
+  });
+});
+exports.getDistances = catchAsyncError(async (req, res, next) => {
+  const { latlon, unit } = req.params;
+  const [lat, lon] = latlon.split(",");
+  const multiplier = unit === "mi" ? 0.000621371 : 0.001;
+  //The equatorial radius of the Earth is approximately 3,963.2 miles or 6,378.1 kilometers[MongoDb Documentation]
+  //radius in miles is distance/3963.2
+  //radius in killometer is distance/6378.1
+  if (!lat || !lon) {
+    return next(
+      new AppError(
+        "Please provide latitude and longitude in format lat,lon.",
+        400
+      )
+    );
+  }
+
+  const distances = await TourModel.aggregate([
+    //Geospatial aggregation requires that the geoNear stage is the first stage in the pipiline
+    //$geoNear stage requires that at least one field contains a geospatil index
+    // But that is taken care of already -> startLocation:'2dsphere'
+    {
+      $geoNear: {
+        //2 mandetory fields for geoNear are near(supplied cords.) and distanceField(contains the calculated values)
+        near: {
+          type: "Point",
+          coordinates: [lon * 1, lat * 1],
+        },
+        distanceField: "distance",
+        distanceMultiplier: multiplier, //convert to either miles or killometer depending on the unit provided
+      },
+    },
+    {
+      $project: {
+        //select or project only the calculated field distance and name from each of the docs
+        distance: 1,
+        name: 1,
+      },
+    },
+  ]);
+  res.status(200).json({
+    status: "Success",
+    data: { data: distances },
+  });
 });

@@ -48,8 +48,8 @@ class APIFeatures {
 
   paginate() {
     let { page, limit } = this.reqQuery;
-    page = Math.floor(Math.abs(+page)) || 1; //NB: +page converts it to number
-    limit = Math.floor(Math.abs(+limit)) || 100;
+    page = Math.floor(Math.abs(page * 1)) || 1; //NB: page * 1 converts it to number
+    limit = Math.floor(Math.abs(limit * 1)) || 100;
     const skipValue = (page - 1) * limit;
     this.query.skip(skipValue).limit(limit);
     return this;

@@ -15,6 +15,8 @@ const {
   aliasCheapestTours,
   getTourStats,
   getMonthlyPlan,
+  getClosedByTours,
+  getDistances,
 } = require("../controllers/tourController");
 const tourRouter = express.Router();
 // tourRouter.param("id", checkID);
@@ -26,6 +28,7 @@ const reviewRouter = require("../routes/reviewRoute");
 tourRouter.use("/:tourId/reviews", reviewRouter);
 
 //ALIAS ROUTES//////////
+//NB: The aliasTopTours middleware simply manipulate the query object to include the specific required properties before running the getTours
 tourRouter.route("/top-tours").get(aliasTopTours, getTours);
 tourRouter.route("/cheapest-tours").get(aliasCheapestTours, getTours);
 ///////////////////////////
@@ -37,6 +40,12 @@ tourRouter
   .get(authenticate, authorize("admin", "guide", "lead-guide"), getMonthlyPlan);
 
 /////////////////////
+//closed-by-tours/182/latlon/-9.766,4.2213/unit/mi where mi==>miles, km==>killometer
+tourRouter
+  .route("/closed-by-tours/:distance/latlon/:latlon/unit/:unit")
+  .get(getClosedByTours);
+tourRouter.route("/distances/latlon/:latlon/unit/:unit").get(getDistances);
+//////////////////
 
 tourRouter
   .route("/")

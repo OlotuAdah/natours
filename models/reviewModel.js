@@ -38,6 +38,7 @@ const reviewSchema = mongoose.Schema(
   }
 );
 
+reviewSchema.index({ tour: 1, user: 1 }, { unique: true }); //a user can write on one review on a tour
 reviewSchema.pre(/^find/, function (next) {
   const currQuery = this;
   //   currQuery.populate(["user", "tour"]); //
@@ -62,8 +63,6 @@ reviewSchema.statics.calculateRatingsAve = async function (tourId) {
     },
   ]);
   //persists these calculated fied to tour
-
-  console.log(stats);
   const updateObj = { ratingsQuantity: 0, ratingsAverage: 4.5 }; //default values
   if (stats.length > 0) {
     updateObj.ratingsQuantity = stats[0].nRatings;
@@ -78,7 +77,7 @@ reviewSchema.statics.calculateRatingsAve = async function (tourId) {
 
 reviewSchema.post("save", function () {
   //the .post trigger does not get acess next function
-  // this points to current review doc
+  // "this" points to current review doc
   //since the method is static it can me called on the class (model) itself
   //since there is no access to review class at this point, the workaround is
   const Review = this.constructor;

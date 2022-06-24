@@ -42,6 +42,9 @@ const tourSchema = mongoose.Schema(
       default: 4.5,
       min: [1, "Rating must be/above 1.0"],
       max: [5, "Rating must be/below 5.0"],
+      //set function is run each time a new value is set for the field
+      set: (val) => parseFloat(val).toFixed(1),
+      // set: (val) => Math.round(val * 10) / 10,
     },
     ratingsQuantity: {
       type: Number,
@@ -112,8 +115,8 @@ const tourSchema = mongoose.Schema(
         day: Number,
       },
     ],
-    // guides:Array, //simply use this for embedding instead of referencing as below
-    guides: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    // guides:Array, //use this for embedding instead of referencing
+    guides: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], //use this for document referencing
   },
 
   {
@@ -125,6 +128,7 @@ const tourSchema = mongoose.Schema(
 ///////////indexes//////makes raeding with this parameters faster
 tourSchema.index({ price: 1, ratingsAverage: -1 });
 tourSchema.index({ slug: 1 });
+tourSchema.index({ startLocation: "2dsphere" }); // 2dsphere for points on a spherical object like the earth surface
 
 ///////////////
 tourSchema.virtual("durationInWeeks").get(function () {
@@ -201,10 +205,12 @@ tourSchema.pre(/^find/, function (next) {
 //AGGREGATION  MIDDLEWARE ////////////////
 tourSchema.pre("aggregate", function (next) {
   //this, points to aggregationn object here
-  const aggregationObject = this;
-  aggregationObject
-    .pipeline()
-    .unshift({ $match: { secretTour: { $ne: true } } }); //unshift pushes elements to the beginning
+  const firstStage = Object.keys(this._pipeline[0]); //returns array of containing 1 obj
+  //when geoNear is the first stage, do  not oveeride that with the unshift method
+  //this is because, the geoNear stage must always be first stage in the aggregation pipline whenever it is present
+  if (firstStage.join().startsWith("$geoNear")) return next();
+  //if the aggregation is not geoNear, then only show documents with secretTour is not set to true
+  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } }); //unshift pushes elements to the beginning
   next();
 });
 const Tour = mongoose.model("Tour", tourSchema);
