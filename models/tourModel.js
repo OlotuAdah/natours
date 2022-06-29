@@ -92,7 +92,6 @@ const tourSchema = mongoose.Schema(
       //the meeting point; where the tour starts. Then there is array of other locations for this tour
       //embedded obj, not just a schema type like secretTour. which means it can have other properties
       //this obj must have at least two fields name: type and coordinates
-      //GeoJSON data type for geo spatial data
       type: {
         type: String,
         default: "Point", //composed of latitude and longitude
@@ -172,13 +171,6 @@ tourSchema.pre("save", async function (next) {
   next();
 });
 
-tourSchema.post("save", function (doc, next) {
-  //doc is document just saved
-  //console.log(doc);
-  //logs the updated doc including slug field this time
-  next(); //Just like express, calls the next middleware in the stack
-});
-
 //QUERY MIDDLEWARE ////////////////
 tourSchema.pre(/^find/, function (next) {
   //Regex matches find, findOne etc
@@ -204,7 +196,7 @@ tourSchema.pre(/^find/, function (next) {
 
 //AGGREGATION  MIDDLEWARE ////////////////
 tourSchema.pre("aggregate", function (next) {
-  //this, points to aggregationn object here
+  //"this" points to aggregationn object in aggreagation hook
   const firstStage = Object.keys(this._pipeline[0]); //returns array of containing 1 obj
   //when geoNear is the first stage, do  not oveeride that with the unshift method
   //this is because, the geoNear stage must always be first stage in the aggregation pipline whenever it is present

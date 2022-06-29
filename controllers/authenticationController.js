@@ -9,12 +9,12 @@ const { cookieOptions } = require("../utils/cookie");
 
 ////signup
 exports.signup = catchAsyncError(async (req, res, next) => {
-  const { name, email, role, password, confirmPassword, passwordChangedAt } =
+  const { name, email, password, confirmPassword, passwordChangedAt } =
     req.body;
   const newUser = await UserModel.create({
     name,
     email,
-    role,
+    // role,
     password,
     confirmPassword,
     passwordChangedAt,
@@ -61,8 +61,7 @@ exports.authenticate = catchAsyncError(async (req, res, next) => {
     token,
     process.env.jwtSecret
   );
-  // console.log("Decoded: ", decodedPayload);
-  //3:Check if user still exists
+  //3:Check if user still exist (user could be deleted by admin already)
   const currentUserId = decodedPayload.id;
   const currentUser = await UserModel.findById(currentUserId);
   if (!currentUser) {
@@ -85,7 +84,7 @@ exports.authenticate = catchAsyncError(async (req, res, next) => {
 exports.authorize = (...roles) => {
   // console.log(roles);
   return (req, res, next) => {
-    //roles an array eg ['admin'], ['admin','lead']
+    //roles an array eg ['admin'] or ['admin','lead']
     if (!roles.includes(req.user.role)) {
       return next(
         new AppError(`You don't have permission to perfrom this action`, 403)
@@ -164,7 +163,7 @@ exports.updatePassword = catchAsyncError(async (req, res, next) => {
   const user = await UserModel.findById(req.user.id).select("+password");
   //2: check if the posted password is correct
   if (!user || !(await user.correctPassword(currentPassword, user.password))) {
-    return next(new AppError(`Incorrect email or password`, 401));
+    return next(new AppError(`Incorrect password`, 401));
   }
   //3: If so, update password
   user.password = newPassword;
@@ -184,7 +183,7 @@ function createAndSendToken(user, res, statusCode, msg) {
   user.password = undefined; //remove password from  response
   res
     .status(statusCode)
-    .json({ status: "Success", msg, token, data: { user } });
+    .json({ status: "Success", msg, token, data: { data: user } });
 }
 
 function signToken(id) {

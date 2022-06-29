@@ -19,6 +19,7 @@ const userSchema = mongoose.Schema({
   },
   photo: {
     type: String,
+    default: "default.png",
   },
   role: {
     type: String,
@@ -63,7 +64,7 @@ userSchema.pre("save", async function (next) {
 userSchema.pre("save", function (next) {
   const doc = this;
   if (!doc.isModified("password") || doc.isNew) return next(); //do this only when password is modified or doc is new, else goto next middleware
-  this.passwordChangedAt = Date.now() - 1000; //subtract 1000millsec or 1 sec to ensure that token is created before password change, in the even that writing to the db lags a little bit
+  this.passwordChangedAt = Date.now() - 1000; //subtract 1000millsec or 1 sec to ensure that token is created before password is changed; in the event that writing to the db lags a little bit
   next();
 });
 
@@ -74,7 +75,7 @@ userSchema.pre(/^find/g, function (next) {
   next();
 });
 
-//Instace Method:Available on all objects
+//Instace Method:Available on all objects or docs
 userSchema.methods.correctPassword = async function (
   suppliedPassword,
   passwordInDB
@@ -102,7 +103,8 @@ userSchema.methods.createPasswordResetToken = function () {
     .update(resetToken)
     .digest("hex");
   this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // valid for 10 minutes
-  //notice doc has been updated with two fields: passwordResetToken and passowdResetExpires  ( .save() required at auth controller)
+  //notice doc has been updated with two fields: passwordResetToken and passowdResetExpires,
+  //therefore doc needs to be saved using .save() in auth controller
   return resetToken;
 };
 

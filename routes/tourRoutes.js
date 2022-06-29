@@ -17,6 +17,8 @@ const {
   getMonthlyPlan,
   getClosedByTours,
   getDistances,
+  uploadTourImages,
+  resizeTourImages,
 } = require("../controllers/tourController");
 const tourRouter = express.Router();
 // tourRouter.param("id", checkID);
@@ -46,16 +48,23 @@ tourRouter
   .get(getClosedByTours);
 tourRouter.route("/distances/latlon/:latlon/unit/:unit").get(getDistances);
 //////////////////
-
+tourRouter.use(authenticate);
 tourRouter
   .route("/")
   .get(getTours)
-  .post(authenticate, authorize("admin", "lead-guide"), createTour)
-  .delete(authenticate, authorize("admin", "lead-guide"), deleteTours);
+  .post(authorize("admin", "lead-guide"), createTour)
+  .delete(authorize("admin", "lead-guide"), deleteTours);
 tourRouter
   .route("/:tourId")
   .get(getTour)
-  .patch(authenticate, authorize("admin", "lead-guide"), updateTour)
-  .delete(authenticate, deleteTour);
+  .patch(
+    authorize("admin", "lead-guide"),
+    uploadTourImages,
+    resizeTourImages,
+    updateTour
+  )
+  .delete(deleteTour);
+
+//uploading tour images
 
 module.exports = tourRouter;

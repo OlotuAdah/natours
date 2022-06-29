@@ -6,6 +6,8 @@ const {
   getMe,
   updateMe,
   deleteMyAccount,
+  uploadUserPhoto,
+  resizeUserPhoto,
 } = require("../controllers/userController");
 const {
   signup,
@@ -18,6 +20,10 @@ const {
 } = require("../controllers/authenticationController");
 const userRouter = express.Router();
 
+///////Setting up multer upload
+
+//////////////////////
+
 ////////Auth route, for users' auth requests
 userRouter.post("/signup", signup);
 userRouter.post("/login", login);
@@ -27,7 +33,7 @@ userRouter.patch("/resetPassword/:token", resetPassword);
 //for only logged in users
 userRouter.use(authenticate); //from this line, all the routes need users to be authenticated to get acess
 userRouter.patch("/updatePassword/", updatePassword);
-userRouter.patch("/updateMe/", updateMe);
+userRouter.patch("/updateMe/", uploadUserPhoto, resizeUserPhoto, updateMe);
 userRouter.delete("/deleteMyAccount/", deleteMyAccount);
 
 /////////////
