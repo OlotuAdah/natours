@@ -12,10 +12,16 @@ module.exports = class Email {
   //2:create a transporter (service that will send the email)
   modifiedCreateTransport() {
     if (process.env.NODE_ENV === "prod") {
-      //return a more robust transporter in production
-      return 1;
+      //use a robust transporter in production (SendGrid)
+      return nodemailer.createTransport({
+        service: "SendGrid",
+        auth: {
+          user: process.env.SENDGRID_USERNAME,
+          pass: process.env.SENDGRID_PASSWORD,
+        },
+      });
     }
-    //return this simple tranporter in dev
+    //use this simple tranporter (Mail Trap) in dev
     return nodemailer.createTransport({
       host: process.env.EmailHost,
       port: process.env.EmailPort,
@@ -61,6 +67,7 @@ module.exports = class Email {
     //   await transporter.sendMail(mailOptions);
   }
   async sendWelcomeMail() {
+    //welcomMail.ejs is the name of the view to be sent as email; second arg is mail subject
     await this.send("welcomeMail", "Welcome to the natours family!");
   }
 

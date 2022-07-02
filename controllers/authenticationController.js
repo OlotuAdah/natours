@@ -98,6 +98,15 @@ exports.authorize = (...roles) => {
   };
 };
 
+//THE ACTIVITY FLOW FOR RESETTING PASSWORD
+// 1: user click the forgort password button
+//2: user enter the email address and send the req to forgotPassword route
+//3: forgot password mail containing password reset toke will be sent to the registered mail (if email addr is valid) of user
+//4: the body of the mail has a button, 'Reset password', click it, you will be routed to a new password collection form
+//5: user is routed to the form along with his/her token
+//6: user enters new password, confirmed it, then a patch req is sent to the passwordReset route along with your token
+//NB: if token has not expired, password reset will be succussful!
+
 exports.forgotPassword = async (req, res, next) => {
   //1: get user based on posted email
   const { email } = req.body;
@@ -108,11 +117,10 @@ exports.forgotPassword = async (req, res, next) => {
   //persist the new change to the doc
   await user.save({ validateBeforeSave: false }); //Turn off model validation when reseting password
   //3:send token to user's email
-  const resetURL = `${req.protocol}://${req.get(
-    "host"
-  )}/api/v1/users/resetPassword/${resetToken}`;
-
   try {
+    const resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/api/v1/users/resetPassword/${resetToken}`;
     await new Email(user, resetURL).sendPasswordReset();
     res
       .status(200)
@@ -137,7 +145,7 @@ exports.resetPassword = catchAsyncError(async (req, res, next) => {
     passwordResetToken: hashedToken,
     passwordResetExpires: { $gt: Date.now() }, //if true, then the 10min expiration windows hasn't passed
   });
-  // console.log(user);
+
   //2: if token hasn't expired, and there is user, set the new passwordResetToken
   if (!user) return next(new AppError("Token is invalid or has expired", 400));
   user.password = req.body.password;
