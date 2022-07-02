@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../models/userModel");
 const catchAsyncError = require("../utils/catchAsyncError");
 const AppError = require("../utils/AppError");
-const sendEmail = require("../utils/email");
+const Email = require("../utils/email");
 const { cookieOptions } = require("../utils/cookie");
 
 ////signup
@@ -20,8 +20,12 @@ exports.signup = catchAsyncError(async (req, res, next) => {
     passwordChangedAt,
   }); //NB: Only store the selected fields for new user, to avoid user creating new doc with admin or other role privileges
   newUser.password = undefined; //don't send password to user
-  // const token = signToken(newUser._id);
-  // res.status(201).json({ status: "Success", token, user: newUser });
+  //send email
+  const url = `${req.protocol}://${req.get("host")}/api/v1/users/updateMe/${
+    newUser.id
+  }`;
+  await new Email(newUser, url).sendWelcomeMail();
+  //send response
   createAndSendToken(newUser, res, 201, "Registration Successful!");
 });
 
@@ -108,13 +112,8 @@ exports.forgotPassword = async (req, res, next) => {
     "host"
   )}/api/v1/users/resetPassword/${resetToken}`;
 
-  const message = `Forgot your passord? Submit a PATCH request with your new password and password confirm to : ${resetURL} \n If you didn't forget your password, kindly ignore this mail`;
   try {
-    await sendEmail({
-      email,
-      subject: "Password Reset Token: Valid for 10 minutes",
-      message,
-    });
+    await new Email(user, resetURL).sendPasswordReset();
     res
       .status(200)
       .json({ status: "Success", message: "Token sent to email: " + email });

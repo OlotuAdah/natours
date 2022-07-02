@@ -213,7 +213,6 @@ exports.getDistances = catchAsyncError(async (req, res, next) => {
 });
 
 ///upload tour images -->hanler
-// const multer = multer({ storage})
 const multerStorage = multer.memoryStorage(); //this way, the image will be stored in memory as a buffer
 const multerFilter = (req, file, callback) => {
   //test if the uploaded file is an image
@@ -229,7 +228,7 @@ exports.uploadTourImages = upload.fields([
 
 exports.resizeTourImages = catchAsyncError(async (req, res, next) => {
   //
-  if (!req.files.imageCover || !req.files.images) return next();
+  if (!req.files.imageCover || !req.files.images) return next(); //if there are no images to upload, skip to next middleware down the stack
 
   //1) process coverImage
   req.body.imageCover = `tour-${req.params.tourId}-${Date.now()}-cover.jpeg`;
